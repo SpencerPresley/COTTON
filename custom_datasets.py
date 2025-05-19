@@ -6,76 +6,95 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-def cot_prompt_pre(src):
-    '''
-    自定义的pre instruction模板
-    :param src:
-    :return:
-    '''
-    src = '### Given a piece of code, output the corresponding implementation idea.\n' \
-          '### Input:\n' + src + '\n### Output:\n'
-    return src
+def cot_prompt_pre(src, system_prompt="You are a helpful assistant that provides implementation ideas for code."):
+    """
+    Custom pre-instruction template, now in chat format.
+    :param src: The source code input from the user.
+    :param system_prompt: An optional system prompt.
+    :return: A list of dictionaries representing the chat messages.
+    """
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": src}
+    ]
+    return messages
 
 class GPTDataset(Dataset):
-    def __init__(self, datafile, tokenizer, source_len=256, cutoff_len=512):
-
-        self.cutoff_len = cutoff_len
+    """
+    A custom dataset class for GPT model fine-tuning.
+    It tokenizes source and target text sequences from a CSV file.
+    """
+    def __init__(self, filename, tokenizer, source_len, cutoff_len, system_prompt_content=None, nrows=None):
+        self.tokenizer = tokenizer
         self.source_len = source_len
+        self.cutoff_len = cutoff_len
+        self.system_prompt_content = system_prompt_content
+
+        # Determine the appropriate file reading function based on the file extension
+        if filename.endswith(".csv"):
+            self.datas = pd.read_csv(filename, nrows=nrows)
+        elif filename.endswith(".jsonl"):
+            self.datas = pd.read_json(filename, lines=True, nrows=nrows)
+        else:
+            raise ValueError("Unsupported file format. Please use .csv or .jsonl files.")
 
         self.inputs = []
         self.token_labels = []
 
-        datas = pd.read_csv(datafile)
-
-        length = len(datas)
+        length = len(self.datas)
 
         for idx in tqdm(range(length)):
-            src = datas["src"][idx]
-            # print(src)
-            # src = cot_prompt_pre(src)
-            tgt = datas["tgt"][idx]
+            src = self.datas["src"][idx]
+            tgt = self.datas["tgt"][idx]
 
-            input_ids, input_labels = self.tokenize_prompt(src, tgt, tokenizer, source_len, cutoff_len)
+            input_ids, input_labels = self.tokenize_prompt(src, tgt)
             self.inputs.append(input_ids)
             self.token_labels.append(input_labels)
 
-    def tokenize(self, prompt, tokenizer, cutoff_len, padding=False):
-        result = tokenizer(
-            prompt,
+    def tokenize_prompt(self, src, tgt):
+        messages = []
+        if self.system_prompt_content:
+            messages.append({"role": "system", "content": self.system_prompt_content})
+        messages.append({"role": "user", "content": src})
+        messages.append({"role": "assistant", "content": tgt})
+
+        tokenized_full_ids = self.tokenizer.apply_chat_template(
+            messages,
+            max_length=self.cutoff_len,
             truncation=True,
-            max_length=cutoff_len,
-            padding='max_length' if padding else False,
+            padding=False, 
+            add_generation_prompt=False,
+            return_tensors=None 
+        )
+        input_ids = tokenized_full_ids
+        labels = list(input_ids)
+
+        prompt_messages_for_masking = []
+        if self.system_prompt_content:
+            prompt_messages_for_masking.append({"role": "system", "content": self.system_prompt_content})
+        prompt_messages_for_masking.append({"role": "user", "content": src})
+        
+        tokenized_prompt_part_ids = self.tokenizer.apply_chat_template(
+            prompt_messages_for_masking,
+            max_length=self.cutoff_len, 
+            truncation=True,
+            padding=False,
+            add_generation_prompt=True,
             return_tensors=None
         )
-        return {
-            "input_ids": result["input_ids"],
-            "labels": copy.deepcopy(result["input_ids"])
-        }
+        prompt_length = len(tokenized_prompt_part_ids)
 
-    def tokenize_prompt(self, src, tgt, tokenizer, raw_source_len, cutoff_len):
-        # 输入的分词， 输入的最大长度为256
-        # tokenized_result = self.src_tokenize(src, tokenizer, cutoff_len)
-        tokenized_result = self.tokenize(src, tokenizer, raw_source_len, padding=False)
+        for i in range(prompt_length):
+            if i < len(labels):
+                 labels[i] = -100
+            else:
+                 break 
+        
+        if all(label == -100 for label in labels):
+            pass
 
-        source_len = len(tokenized_result['input_ids'])
-
-        assert source_len<=raw_source_len
-        assert len(tgt)>0
-
-        src = tokenizer.decode(tokenized_result['input_ids'], skip_special_tokens=True, clean_up_tokenization_spaces=True)
-        # 输入+输出
-        prompt_with_response = src + tgt + " " + tokenizer.eos_token
-
-        # 输入+输出 的分词
-        tokenized_with_response = self.tokenize(prompt_with_response, tokenizer, cutoff_len, padding=False)
-
-        tokenized_with_response["labels"] = [-100] * source_len + tokenized_with_response["labels"][source_len:]
-        # print(tokenizer.decode(tokenized_with_response["labels"], skip_special_tokens=True,
-        #                        clean_up_tokenization_spaces=True))
-
-        assert len(tokenized_with_response["input_ids"]) == len(tokenized_with_response["labels"])
-
-        return tokenized_with_response["input_ids"], tokenized_with_response["labels"]
+        assert len(input_ids) == len(labels), "Input IDs and Labels must have the same length."
+        return input_ids, labels
 
     def __len__(self):
         return len(self.inputs)

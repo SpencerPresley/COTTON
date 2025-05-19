@@ -28,8 +28,7 @@ Step 2. Iterate through operations.
 Step 3. Return False.
 
 ### Input:
-
-    '''
+'''
     try:
         response = openai.ChatCompletion.create(
             model=model,

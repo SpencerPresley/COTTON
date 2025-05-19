@@ -1,0 +1,47 @@
+ spencerpresley   main -  python train.py --skip_train
+Attempting to load model for testing from: save_model_llama3.2_fast_eval//checkpoint-best-bleu
+Initializing model. Base: TinyLlama/TinyLlama-1.1B-Chat-v1.0, Adapter: save_model_llama3.2_fast_eval//checkpoint-best-bleu
+***** CUDA.empty_cache() *****
+***** Running on device: cuda *****
+--- Running Test on dataset/humaneval.csv ---
+Generating predictions for test set:   0%|              | 0/164 [00:00<?, ?it/s]/home/spencerpresley/school/code/490/COTTON/venv-cotton3/lib/python3.9/site-packages/transformers/generation/configuration_utils.py:631: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.2` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/home/spencerpresley/school/code/490/COTTON/venv-cotton3/lib/python3.9/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.95` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+Generating predictions for test set: 100%|████| 164/164 [08:53<00:00,  3.25s/it]^A
+Evaluation scores:
+  bleu: 39.96297073801676
+  counts: [7718, 5532, 4275, 3330]
+  totals: [12672, 12508, 12344, 12180]
+  precisions: [60.905934343434346, 44.22769427566357, 34.632209980557356, 27.339901477832512]
+  bp: 1.0
+  sys_len: 12672
+  ref_len: 12618
+  rouge1: 0.6361199504565374
+  rouge2: 0.4457578272113122
+  rougeL: 0.5590979436358867
+  rougeLsum: 0.6267977992836884
+--- Test on dataset/humaneval.csv Finished ---
+--- Running Test on dataset/openeval.csv ---
+Generating predictions for test set:   0%|                      | 0/178 [00:00<?, ?it/s]/home/spencerpresley/school/code/490/COTTON/venv-cotton3/lib/python3.9/site-packages/transformers/generation/configuration_utils.py:631: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.2` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/home/spencerpresley/school/code/490/COTTON/venv-cotton3/lib/python3.9/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.95` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+Generating predictions for test set: 100%|████████████| 178/178 [08:53<00:00,  3.00s/it]
+Evaluation scores:
+  bleu: 43.39913389507569
+  counts: [8456, 6446, 5098, 4055]
+  totals: [12348, 12170, 11992, 11814]
+  precisions: [68.48072562358277, 52.96631059983566, 42.51167444963309, 34.32368376502455]
+  bp: 0.9048227625437297
+  sys_len: 12348
+  ref_len: 13583
+  rouge1: 0.6574409546944775
+  rouge2: 0.4713952141314226
+  rougeL: 0.5800776841405713
+  rougeLsum: 0.6456083307499936
+--- Test on dataset/openeval.csv Finished ---
+               
+ [~/school/code/490/COTTON]
+ spencerpresley   main -  
+
